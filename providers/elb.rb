@@ -43,19 +43,16 @@ action :create do
   end
   converge_by "Creating ELB #{@new_resource.name}" do
     current_resource.client.create_load_balancer(load_balancer_name: current_resource.name, listeners: l, subnets: s)
-    new_resource.updated_by_last_action true
     load_current_resource
   end unless current_resource.exist?
   (self.listeners - l).each do |l|
     converge_by "Deleting listener on port #{l.load_balancer_port}" do
       current_resource.client.delete_load_balancer_listeners(load_balancer_name: current_resource.name, load_balancer_ports: [l.load_balancer_port] ) 
-      new_resource.updated_by_last_action true
     end
   end
   (l - self.listeners).each do |l|
     converge_by "Creating listener #{l.protocol}(#{l.load_balancer_port}) -> #{l.instance_protocol}(#{l.instance_port})" do
       current_resource.client.create_load_balancer_listeners(load_balancer_name: current_resource.name, listeners: [l] ) 
-      new_resource.updated_by_last_action true
     end
   end
   (s - subnets).each do |s|
@@ -63,7 +60,6 @@ action :create do
     name ||= s.id
     converge_by "Attaching to subnet '#{name}'" do
       current_resource.client.attach_load_balancer_to_subnets(load_balancer_name: new_resource.name, subnets: [ s.id ])
-      new_resource.updated_by_last_action true
     end
   end
   (subnets - s).each do |s|
@@ -71,19 +67,16 @@ action :create do
     name ||= s.id
     converge_by "Detaching from subnet '#{name}'" do
       current_resource.client.detach_load_balancer_from_subnets(load_balancer_name: new_resource.name, subnets: [ s.id ])
-      new_resource.updated_by_last_action true
     end
   end
   converge_by "Setting security groups #{sg.map{|s| s.group_name}}" do
     current_resource.client.apply_security_groups_to_load_balancer(load_balancer_name: new_resource.name, security_groups: sg.map{|s| s.id})
-    new_resource.updated_by_last_action true
   end unless security_groups == sg
 end
 
 action :delete do
   converge_by "Deleting ELB #{@new_resource.name}" do
     current_resource.client.delete_load_balancer(load_balancer_name: current_resource.name)
-    new_resource.updated_by_last_action true
   end if current_resource.exist?  
 end
 
