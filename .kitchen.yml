@@ -1,0 +1,24 @@
+---
+driver:
+  name: vagrant
+  synced_folders:
+    - ["../", "/vagrant"]
+
+provisioner:
+  name: chef_zero
+  chef_omnibus_url: file:///vagrant/install_chef.sh
+
+platforms:
+  - name: ubuntu-14.04
+
+suites:
+  - name: default
+    run_list:
+      - recipe[aws-elb::default]
+  - name: create_elb
+    run_list:
+      - recipe[aws-elb::create_elb]
+  - name: delete_elb
+    run_list:
+      - recipe[aws-elb::delete_elb]
+
