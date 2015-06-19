@@ -1,3 +1,5 @@
+include Chef::AwsEc2::Credentials
+
 def whyrun_supported?
   true
 end
@@ -6,9 +8,9 @@ use_inline_resources
 
 attr_accessor :vpc, :listeners, :subnets, :security_groups
 
-def load_current_resource 
+def load_current_resource
   self.current_resource = Chef::Resource::AwsElbElb.new @new_resource.name
-  current_resource.client = Chef::AwsEc2.get_elb_client(@new_resource.access_key_id, @new_resource.secret_access_key, @new_resource.region)
+  current_resource.client = Chef::AwsEc2.get_elb_client(aws_credentials, aws_region)
   begin current_resource.elb = @current_resource.client.describe_load_balancers(load_balancer_names: [current_resource.name], page_size: 1).load_balancer_descriptions.first
   rescue Aws::ElasticLoadBalancing::Errors::LoadBalancerNotFound
   end
@@ -47,12 +49,12 @@ action :create do
   end unless current_resource.exist?
   (self.listeners - l).each do |l|
     converge_by "Deleting listener on port #{l.load_balancer_port}" do
-      current_resource.client.delete_load_balancer_listeners(load_balancer_name: current_resource.name, load_balancer_ports: [l.load_balancer_port] ) 
+      current_resource.client.delete_load_balancer_listeners(load_balancer_name: current_resource.name, load_balancer_ports: [l.load_balancer_port] )
     end
   end
   (l - self.listeners).each do |l|
     converge_by "Creating listener #{l.protocol}(#{l.load_balancer_port}) -> #{l.instance_protocol}(#{l.instance_port})" do
-      current_resource.client.create_load_balancer_listeners(load_balancer_name: current_resource.name, listeners: [l] ) 
+      current_resource.client.create_load_balancer_listeners(load_balancer_name: current_resource.name, listeners: [l] )
     end
   end
   (s - subnets).each do |s|
@@ -77,7 +79,7 @@ end
 action :delete do
   converge_by "Deleting ELB #{@new_resource.name}" do
     current_resource.client.delete_load_balancer(load_balancer_name: current_resource.name)
-  end if current_resource.exist?  
+  end if current_resource.exist?
 end
 
 private
@@ -85,7 +87,7 @@ private
 def canonicalize_listeners l
   return if l.nil?
   listener = Chef::Resource::AwsElbElb::Listener
-  l = [ l ] unless l.instance_of? Array 
+  l = [ l ] unless l.instance_of? Array
   l = l.map do |k,v|
     listener.new :tcp, k.to_i, :tcp, v.to_i
   end if l.instance_of? Hash

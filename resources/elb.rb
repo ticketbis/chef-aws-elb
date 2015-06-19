@@ -8,9 +8,9 @@ attribute :certificate, kind_of: String
 attribute :vpc, kind_of: String, required: true
 attribute :subnets, kind_of: [String, Array], required: true
 attribute :security_groups, kind_of: [String, Array]
-attribute :region, kind_of: String, required: true
-attribute :access_key_id, kind_of: String, required: true
-attribute :secret_access_key, kind_of: String, required: true
+attribute :region, kind_of: String
+attribute :access_key_id, kind_of: String
+attribute :secret_access_key, kind_of: String
 
 attr_accessor :client, :ec2_client, :iam_client, :elb
 
