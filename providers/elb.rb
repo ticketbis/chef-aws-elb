@@ -14,8 +14,8 @@ def load_current_resource
   begin current_resource.elb = @current_resource.client.describe_load_balancers(load_balancer_names: [current_resource.name], page_size: 1).load_balancer_descriptions.first
   rescue Aws::ElasticLoadBalancing::Errors::LoadBalancerNotFound
   end
-  current_resource.iam_client = Chef::AwsEc2.get_iam_client(@new_resource.access_key_id, @new_resource.secret_access_key, @new_resource.region)
-  current_resource.ec2_client = Chef::AwsEc2.get_client(@new_resource.access_key_id, @new_resource.secret_access_key, @new_resource.region)
+  current_resource.iam_client = Chef::AwsEc2.get_iam_client(aws_credentials, aws_region)
+  current_resource.ec2_client = Chef::AwsEc2.get_client(aws_credentials, aws_region)
   self.vpc = Chef::AwsEc2.get_vpc(new_resource.vpc, current_resource.ec2_client)
   fail "Unknown VPC '#{vpc}'" if vpc.nil?
   unless current_resource.elb.nil?
