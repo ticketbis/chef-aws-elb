@@ -44,7 +44,9 @@ action :create do
     t
   end
   converge_by "Creating ELB #{@new_resource.name}" do
-    current_resource.client.create_load_balancer(load_balancer_name: current_resource.name, listeners: l, subnets: s)
+    current_resource.client.create_load_balancer(load_balancer_name: current_resource.name,
+      listeners: l, subnets: s.map{|s| s.id}, security_groups: sg.map{|sg| sg.id}
+    )
     load_current_resource
   end unless current_resource.exist?
   (self.listeners - l).each do |l|
