@@ -16,8 +16,6 @@ def load_current_resource
   end
   current_resource.iam_client = Chef::AwsEc2.get_iam_client(aws_credentials, aws_region)
   current_resource.ec2_client = Chef::AwsEc2.get_client(aws_credentials, aws_region)
-  self.vpc = Chef::AwsEc2.get_vpc(new_resource.vpc, current_resource.ec2_client)
-  fail "Unknown VPC '#{vpc}'" if vpc.nil?
   unless current_resource.elb.nil?
     self.listeners = current_resource.elb.listener_descriptions.map do |d|
       d.listener
@@ -32,6 +30,8 @@ def load_current_resource
 end
 
 action :create do
+  vpc = Chef::AwsEc2.get_vpc(new_resource.vpc, current_resource.ec2_client)
+  fail "Unknown VPC '#{vpc}'" if vpc.nil?
   l = canonicalize_listeners new_resource.listeners
   s = new_resource.subnets.map do |s|
     t = Chef::AwsEc2.get_subnet(vpc, s)
