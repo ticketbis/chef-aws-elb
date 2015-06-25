@@ -27,6 +27,12 @@ def load_current_resource
       Aws::EC2::SecurityGroup.new id: s, client: current_resource.ec2_client
     end
     current_resource.instances current_resource.elb.instances.map{|i| i.instance_id}
+    h = current_resource.elb.health_check
+    current_resource.health h.target
+    current_resource.health_timeout h.timeout
+    current_resource.health_interval h.interval
+    current_resource.health_healthy h.healthy_threshold
+    current_resource.health_unhealthy h.unhealthy_threshold
   end
 end
 
@@ -103,6 +109,21 @@ action :create do
   (current_resource.instances - its).each do |i|
     converge_by "Detaching instance '#{i}'" do
       current_resource.client.deregister_instances_from_load_balancer(load_balancer_name: new_resource.name, instances: [{ instance_id: i }])
+    end
+  end
+  unless current_resource.health == new_resource.health and
+    current_resource.health_interval == new_resource.health_interval and
+    current_resource.health_timeout == new_resource.health_timeout and
+    current_resource.health_healthy == new_resource.health_healthy and
+    current_resource.health_unhealthy == new_resource.health_unhealthy
+
+    m = new_resource.health.match(%r'(TCP|SSL|HTTP|HTTPS):([0-9]+)(/.*)?')
+    fail "Invalid target spec '#{new_resource.health}'. It must be proto:port[/path]" if m.nil?
+    fail "HTTP and HTTPS need a path: (HTTP|HTTPS):port/path" if (m[1] == 'HTTP' or m[1] == 'HTTPS') and m[3].nil?
+    h = {target: new_resource.health, interval: new_resource.health_interval, timeout: new_resource.health_timeout,
+      healthy_threshold: new_resource.health_healthy, unhealthy_threshold: new_resource.health_unhealthy}
+    converge_by "Changing health to check #{new_resource.health} every #{new_resource.health_interval} seconds waiting #{new_resource.health_timeout} seconds. Mark invalid after #{new_resource.health_unhealthy} attemps and valid again after #{new_resource.health_healthy} attempts." do
+      current_resource.client.configure_health_check(load_balancer_name: new_resource.name, health_check: h)
     end
   end
 end
