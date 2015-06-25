@@ -9,6 +9,11 @@ attribute :vpc, kind_of: String, required: true
 attribute :subnets, kind_of: [String, Array], required: true
 attribute :security_groups, kind_of: [String, Array]
 attribute :instances, kind_of: [String, Array]
+attribute :health, kind_of: [String, Symbol], default: 'TCP:80'
+attribute :health_interval, kind_of: Integer, default: 30
+attribute :health_timeout, kind_of: Integer, default: 5
+attribute :health_healthy, kind_of: Integer, default: 10
+attribute :health_unhealthy, kind_of: Integer, default: 2
 attribute :region, kind_of: String
 attribute :access_key_id, kind_of: String
 attribute :secret_access_key, kind_of: String
