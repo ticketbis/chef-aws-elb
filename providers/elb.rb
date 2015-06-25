@@ -9,7 +9,7 @@ use_inline_resources
 attr_accessor :vpc, :listeners, :subnets, :security_groups
 
 def load_current_resource
-  self.current_resource = Chef::Resource::AwsElbElb.new @new_resource.name
+  self.current_resource = Chef::Resource.resource_for_node(new_resource.declared_type, node).new @new_resource.name
   current_resource.client = Chef::AwsEc2.get_elb_client(aws_credentials, aws_region)
   begin current_resource.elb = @current_resource.client.describe_load_balancers(load_balancer_names: [current_resource.name], page_size: 1).load_balancer_descriptions.first
   rescue Aws::ElasticLoadBalancing::Errors::LoadBalancerNotFound
