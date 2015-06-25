@@ -16,8 +16,6 @@ def load_current_resource
   end
   current_resource.iam_client = Chef::AwsEc2.get_iam_client(aws_credentials, aws_region)
   current_resource.ec2_client = Chef::AwsEc2.get_client(aws_credentials, aws_region)
-  self.vpc = Chef::AwsEc2.get_vpc(new_resource.vpc, current_resource.ec2_client)
-  fail "Unknown VPC '#{vpc}'" if vpc.nil?
   unless current_resource.elb.nil?
     self.listeners = current_resource.elb.listener_descriptions.map do |d|
       d.listener
@@ -28,10 +26,13 @@ def load_current_resource
     self.security_groups = current_resource.elb.security_groups.map do |s|
       Aws::EC2::SecurityGroup.new id: s, client: current_resource.ec2_client
     end
+    current_resource.instances current_resource.elb.instances.map{|i| i.instance_id}
   end
 end
 
 action :create do
+  vpc = Chef::AwsEc2.get_vpc(new_resource.vpc, current_resource.ec2_client)
+  fail "Unknown VPC '#{vpc}'" if vpc.nil?
   l = canonicalize_listeners new_resource.listeners
   s = new_resource.subnets.map do |s|
     t = Chef::AwsEc2.get_subnet(vpc, s)
@@ -43,8 +44,28 @@ action :create do
     fail "Unknown security group '#{s}' in VPC '#{new_resource.vpc}'" if t.nil?
     t
   end
+  its = new_resource.instances.map do |i|
+    next i if /^i-/ =~ i
+    unless /(.*)@(.*)/ =~ i
+      begin r = new_resource.resources("aws_ec2_instance[#{i}]")
+      rescue then next
+      end
+      i = r.name + '@' + r.subnet
+    end
+    if /(.*)@(.*)/ =~ i
+      subnet = Chef::AwsEc2.get_subnet(vpc, $2)
+      fail "Unknown subnet '#{$2}' in VPC '#{new_resource.vpc}'" if subnet.nil?
+      t = Chef::AwsEc2.get_instance($1, subnet)
+      fail "Unknow instance '#{i}' in subnet '#{$2}' in VPC '#{new_resource.vpc}'" if t.nil?
+      t.id
+    else
+      nil
+    end
+  end.compact
   converge_by "Creating ELB #{@new_resource.name}" do
-    current_resource.client.create_load_balancer(load_balancer_name: current_resource.name, listeners: l, subnets: s)
+    current_resource.client.create_load_balancer(load_balancer_name: current_resource.name,
+      listeners: l, subnets: s.map{|s| s.id}, security_groups: sg.map{|sg| sg.id}
+    )
     load_current_resource
   end unless current_resource.exist?
   (self.listeners - l).each do |l|
@@ -74,6 +95,16 @@ action :create do
   converge_by "Setting security groups #{sg.map{|s| s.group_name}}" do
     current_resource.client.apply_security_groups_to_load_balancer(load_balancer_name: new_resource.name, security_groups: sg.map{|s| s.id})
   end unless security_groups == sg
+  (its - current_resource.instances).each do |i|
+    converge_by "Attaching instance '#{i}'" do
+      current_resource.client.register_instances_with_load_balancer(load_balancer_name: new_resource.name, instances: [{ instance_id: i }])
+    end
+  end
+  (current_resource.instances - its).each do |i|
+    converge_by "Detaching instance '#{i}'" do
+      current_resource.client.deregister_instances_from_load_balancer(load_balancer_name: new_resource.name, instances: [{ instance_id: i }])
+    end
+  end
 end
 
 action :delete do

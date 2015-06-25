@@ -8,6 +8,7 @@ attribute :certificate, kind_of: String
 attribute :vpc, kind_of: String, required: true
 attribute :subnets, kind_of: [String, Array], required: true
 attribute :security_groups, kind_of: [String, Array]
+attribute :instances, kind_of: [String, Array]
 attribute :region, kind_of: String
 attribute :access_key_id, kind_of: String
 attribute :secret_access_key, kind_of: String
@@ -31,4 +32,6 @@ end
 def after_created
   subnets([ subnets ]) unless @subnets.nil? or subnets.instance_of? Array
   security_groups([ security_groups ]) unless @security_groups.nil? or security_groups.instance_of? Array
+  instances([]) if @instances.nil?
+  instances([ instances ]) unless instances.instance_of? Array
 end
