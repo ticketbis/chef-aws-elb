@@ -137,10 +137,10 @@ private
 def canonicalize_listeners l
   return if l.nil?
   listener = Chef::Resource::AwsElbElb::Listener
-  l = [ l ] unless l.instance_of? Array
   l = l.map do |k,v|
     listener.new :tcp, k.to_i, :tcp, v.to_i
   end if l.instance_of? Hash
+  l = [ l ] unless l.instance_of? Array
   l = l.map do |e|
     e = listener.new :http, 80, :http, 80 if e == :http
     e = listener.new :https, 443, :https, 443 if e == :https
