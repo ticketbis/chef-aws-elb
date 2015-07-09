@@ -32,3 +32,4 @@ in the specified subnet.
 * health_timeout: how many seconds to mark the probe as failed. 5 by default.
 * health_healthy: how many success probes to mark backend as ok. 10 by default.
 * health_unhealthy: how many failed probes to mark instance as faulty. 2 by default.
+* dns_name: DNS name or array of DNS names pointing to public ELB DNS name (CNAME)

@@ -14,6 +14,7 @@ attribute :health_interval, kind_of: Integer, default: 30
 attribute :health_timeout, kind_of: Integer, default: 5
 attribute :health_healthy, kind_of: Integer, default: 10
 attribute :health_unhealthy, kind_of: Integer, default: 2
+attribute :dns_name, kind_of: [String, Array], default: []
 attribute :region, kind_of: String
 attribute :access_key_id, kind_of: String
 attribute :secret_access_key, kind_of: String
@@ -39,4 +40,5 @@ def after_created
   security_groups([ security_groups ]) unless @security_groups.nil? or security_groups.instance_of? Array
   instances([]) if @instances.nil?
   instances([ instances ]) unless instances.instance_of? Array
+  dns_name([ dns_name ]) unless dns_name.instance_of? Array
 end

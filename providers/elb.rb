@@ -124,6 +124,21 @@ action :create do
       current_resource.client.configure_health_check(load_balancer_name: new_resource.name, health_check: h)
     end
   end
+  dns_names = current_resource.client.describe_tags(load_balancer_names: [new_resource.name]).tag_descriptions.first
+  dns_names = dns_names.nil? ? [] : dns_names.tags.find{|t| t.key == 'chef_dns_names'}
+  dns_names = dns_names.nil? ? [] : dns_names.value.split(':::')
+  (new_resource.dns_name - dns_names).each do |a|
+    aws_route53_entry a do
+      elb "#{new_resource.name}"
+    end
+  end
+  current_resource.client.add_tags(load_balancer_names: [new_resource.name], tags:[{key: 'chef_dns_names', value: new_resource.dns_name.join(':::')}])
+  (dns_names - new_resource.dns_name).each do |a|
+    aws_route53_entry a do
+      elb "#{new_resource.name}"
+      action :delete
+    end
+  end
 end
 
 action :delete do
